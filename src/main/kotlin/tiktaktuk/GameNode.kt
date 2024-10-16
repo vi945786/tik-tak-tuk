@@ -1,6 +1,5 @@
 package tiktaktuk
 
-import com.google.common.collect.ImmutableMap
 import com.google.common.collect.ImmutableSet
 import tiktaktuk.game.Board
 import tiktaktuk.game.Moves
@@ -17,8 +16,14 @@ private val table = HashMap<Int, GameNode>()
 data class GameEdge(val node: GameNode, val move: Moves)
 
 class GameNode private constructor(val board: Board) {
-    private var children: ImmutableSet<GameEdge> = ImmutableSet.of()
-    private var parents: ImmutableSet<GameEdge> = ImmutableSet.of()
+    val boardId = board.serialize()
+
+    var children: ImmutableSet<GameEdge> = ImmutableSet.of()
+        private set
+
+    var parents: ImmutableSet<GameEdge> = ImmutableSet.of()
+        private set
+
 
     fun addChild(node: GameNode, move: Moves) {
         children = children.mutable().addValue(move, node).immutable()
@@ -43,7 +48,7 @@ class GameNode private constructor(val board: Board) {
     }
 
     override fun hashCode(): Int {
-        return board.serialize()
+        return boardId
     }
 
     override fun equals(other: Any?): Boolean {
