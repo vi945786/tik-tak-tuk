@@ -3,28 +3,11 @@ package tiktaktuk
 import tiktaktuk.game.Board
 import tiktaktuk.game.Color.Companion.EMPTY
 import tiktaktuk.game.Moves
-import java.io.BufferedWriter
-import java.io.File
-import java.io.FileWriter
 import java.util.concurrent.TimeUnit
-import kotlin.io.path.Path
-import kotlin.math.pow
-
-fun isNotFloating(b: Board): Boolean {
-    for (column in 0..<3) {
-        for (row in 0..<2) {
-            if (b.board[row][column] != EMPTY && b.board[row +1][column] == EMPTY) {
-                return false
-            }
-        }
-    }
-    return true
-}
 
 fun generateGraph() {
-    for (i in 0..1062881) { //(3.0.pow(12.0).toInt() - 1).shl(1) + 1 (look at Board.serialize)
+    for (i in generateValidBoardIds()) {
         val b = Board.deserialize(i)
-        if(!isNotFloating(b)) continue
         val bNode = GameNode.of(b)
 
         if(b.win != EMPTY) {
@@ -38,35 +21,33 @@ fun generateGraph() {
             }
         }
     }
+
+    GameNode.finalize()
 }
 
-fun main() { //TODO optimize (Board.move)
-    val t1 = System.nanoTime()
-    generateGraph()
-    val t2 = System.nanoTime()
-    println("graph: ${TimeUnit.MILLISECONDS.convert(t2 - t1, TimeUnit.NANOSECONDS)}")
-    var allNodes = findAllChildNodes()
-    println("clean up: ${TimeUnit.MILLISECONDS.convert(System.nanoTime() - t2, TimeUnit.NANOSECONDS)}")
-}
+fun generateValidBoardIds(): MutableSet<Int> {
+    val ids = mutableSetOf<Int>()
+    val possibleColumns = arrayOf("000", "001", "002", "011", "012", "021", "022", "111", "112", "121", "122", "211", "212", "221", "222") //all the valid columns in a trinary string
 
-fun findAllChildNodes(node: GameNode = GameNode.of(Board())): MutableSet<GameNode> {
-    val visitedNodes = mutableSetOf<GameNode>()
-    val stack = mutableListOf<GameNode>()
+    for (i in 0..26) {
+        val s = i.toString(radix = 3).padStart(3, '0')
+        for (c1 in possibleColumns) {
+            for (c2 in possibleColumns) {
+                for (c3 in possibleColumns) {
 
-    stack.add(node)
+                    val board = "$c1$c2$c3$s".toInt(3) shl 1
+                    for (t in 0..1) {
+                        ids.add(board or t)
+                    }
 
-    while (stack.isNotEmpty()) {
-        val currentNode = stack.removeAt(stack.size - 1)
-
-        if (currentNode in visitedNodes) continue
-        visitedNodes.add(currentNode)
-
-        for (child in currentNode.children) {
-            if (child.node in visitedNodes) continue
-            stack.add(child.node)
+                }
+            }
         }
-
     }
 
-    return visitedNodes
+    return ids
+}
+
+fun main() {
+    generateGraph()
 }

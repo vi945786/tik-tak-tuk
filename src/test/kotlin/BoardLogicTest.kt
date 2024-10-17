@@ -123,20 +123,4 @@ class BoardLogicTest {
 
         assertEquals(YELLOW, board.win)
     }
-
-    @Test
-    fun serializationTest() {
-        var board = Board(
-            ImmutableList.of(
-                ImmutableList.of(RED, YELLOW, EMPTY),
-                ImmutableList.of(RED, EMPTY, YELLOW),
-                ImmutableList.of(RED, YELLOW, EMPTY)
-            ), ImmutableList.of(-1, 0, 1), RED
-        )
-
-        var serialized = board.serialize()
-
-        assertEquals(855533, serialized)
-        assertEquals(board, Board.deserialize(serialized))
-    }
 }

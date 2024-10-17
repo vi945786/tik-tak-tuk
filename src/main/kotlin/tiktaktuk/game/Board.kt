@@ -122,15 +122,15 @@ data class Board(val board: ImmutableList<ImmutableList<Color>> = defaultBoard, 
         val sb = StringBuilder()
 
         sb.append(board[0][0].i)
-        sb.append(board[0][1].i)
-        sb.append(board[0][2].i)
-
         sb.append(board[1][0].i)
-        sb.append(board[1][1].i)
-        sb.append(board[1][2].i)
-
         sb.append(board[2][0].i)
+
+        sb.append(board[0][1].i)
+        sb.append(board[1][1].i)
         sb.append(board[2][1].i)
+
+        sb.append(board[0][2].i)
+        sb.append(board[1][2].i)
         sb.append(board[2][2].i)
 
         sb.append(shifts[0] +1)
@@ -155,9 +155,9 @@ data class Board(val board: ImmutableList<ImmutableList<Color>> = defaultBoard, 
             }
 
             val board = arrayOf(
-                arrayOf(Color.of(nums[0]), Color.of(nums[1]), Color.of(nums[2])),
-                arrayOf(Color.of(nums[3]), Color.of(nums[4]), Color.of(nums[5])),
-                arrayOf(Color.of(nums[6]), Color.of(nums[7]), Color.of(nums[8]))
+                arrayOf(Color.of(nums[0]), Color.of(nums[3]), Color.of(nums[6])),
+                arrayOf(Color.of(nums[1]), Color.of(nums[4]), Color.of(nums[7])),
+                arrayOf(Color.of(nums[2]), Color.of(nums[5]), Color.of(nums[8]))
             )
 
             var shifts = arrayOf(nums[9] -1, nums[10] -1, nums[11] -1)
