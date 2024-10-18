@@ -1,14 +1,10 @@
 package tiktaktuk
 
 import com.google.common.collect.ImmutableSet
-import com.google.common.primitives.Floats.max
 import tiktaktuk.game.Board
 import tiktaktuk.game.Color
 import tiktaktuk.game.Moves
-import java.util.*
-import kotlin.collections.HashMap
 import kotlin.math.abs
-import kotlin.math.min
 
 private fun ImmutableSet<GameEdge>.mutable() = this.toMutableSet()
 private fun MutableSet<GameEdge>.immutable() = ImmutableSet.copyOf(this)
@@ -102,43 +98,74 @@ class GameNode private constructor(val board: Board) {
                 table.remove(it)
             }
 
-            val tY = Thread {calculateOdds({ this.yellowWinOdds }, { this.yellowWinOdds = it }, { color, d -> if(color == Color.RED) -d else d })}.let { it.start() ; it }
-            val tR = Thread {calculateOdds({ this.redWinOdds }, { this.redWinOdds = it }, { color, d -> if(color == Color.YELLOW) -d else d })}.let { it.start() ; it }
-
-            tY.join()
-            tR.join()
+            mutableListOf(
+                Thread { calculateOdds(YellowNode()) },
+                Thread { calculateOdds(RedNode()) }
+            ).let {
+                it.forEach { it.start() }
+                it.forEach { it.join() }
+            }
         }
 
-        private const val DROP_OFF_VALUE = 1
-        private const val TIE_VALUE = -7.5
-        private const val WIN_VALUE = 10.0
-        private const val THRESHOLD = 0.0
+        interface ColoredNode {
+            var GameNode.winOdds: Double
 
-        private fun calculateOdds(getWinOdds: GameNode.() -> Double, setWinOdds: GameNode.(Double) -> Unit, flipLoss: (Color, Double) -> Double) {
-            var lastTotalDifference = 0.0
-            var currentTotalDifference = 0.0
+            fun isWinningColor(color: Color): Boolean
+        }
+
+        class YellowNode : ColoredNode {
+            override var GameNode.winOdds: Double
+                set(d) = run { this.yellowWinOdds = d }
+                get() = this.yellowWinOdds
+
+            override fun isWinningColor(color: Color) = color == Color.YELLOW
+        }
+
+        class RedNode : ColoredNode {
+            override var GameNode.winOdds: Double
+                set(d) = run { this.redWinOdds = d }
+                get() = this.redWinOdds
+
+            override fun isWinningColor(color: Color) = color == Color.RED
+        }
+
+        //TODO find values for easy, medium, hard, and impossible mode
+        private const val DROP_OFF_VALUE = 0.95
+        private const val WIN_VALUE = 10.0
+        private const val THRESHOLD = 0.005
+
+        private const val LOSE_WEIGHT_MULTIPLIER = 2.0
+
+        private const val BEST_MOVE_WEIGHT = 0.4
+        private const val AVERAGE_MOVE_WEIGHT = 0.6
+
+        private fun calculateOdds(coloredNode: ColoredNode) {
+            var currentTotalDifference: Double
 
             do {
-                lastTotalDifference = currentTotalDifference
                 currentTotalDifference = 0.0
 
                 for(node in table.values) {
-                    currentTotalDifference += updateNodeOdds(node, getWinOdds, setWinOdds, flipLoss)
+                    currentTotalDifference += updateNodeOdds(node, coloredNode)
                 }
 
-            } while (abs(lastTotalDifference - currentTotalDifference) > THRESHOLD)
+            } while (currentTotalDifference > THRESHOLD)
         }
 
-        private fun updateNodeOdds(node: GameNode, getWinOdds: GameNode.() -> Double, setWinOdds: GameNode.(Double) -> Unit, flipLoss: (Color, Double) -> Double): Double {
-            val oldOdds = node.getWinOdds()
-            node.setWinOdds(when(node.board.win) {
-                Color.YELLOW -> flipLoss(Color.YELLOW, WIN_VALUE)
-                Color.RED -> flipLoss(Color.RED, WIN_VALUE)
-                Color.BOTH -> TIE_VALUE
-                else -> node.children.map { it.node.getWinOdds() * DROP_OFF_VALUE }.average()
-            })
+        private fun updateNodeOdds(node: GameNode, coloredNode: ColoredNode) = with(coloredNode) {
+            val old = node.winOdds
+            node.winOdds = when(node.board.win) {
+                Color.YELLOW, Color.RED -> if(isWinningColor(node.board.win)) WIN_VALUE else -WIN_VALUE * LOSE_WEIGHT_MULTIPLIER
+                Color.BOTH -> 0.0
+                else -> {
+                    val bestMoveOdds = node.children.maxOf { it.node.winOdds * DROP_OFF_VALUE }
+                    val avgMoveOdds = node.children.map { it.node.winOdds * DROP_OFF_VALUE }.average()
 
-            return abs(oldOdds - node.getWinOdds())
+                    (BEST_MOVE_WEIGHT * bestMoveOdds) + (AVERAGE_MOVE_WEIGHT * avgMoveOdds)
+                }
+            }
+
+            return@with abs(old - node.winOdds)
         }
     }
 
