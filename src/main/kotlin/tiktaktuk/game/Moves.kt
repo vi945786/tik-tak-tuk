@@ -1,9 +1,9 @@
 package tiktaktuk.game
 
 enum class Moves {
-    LC,
-    MC,
-    RC,
+    L,
+    M,
+    R,
 
     TR,
     MR,
@@ -14,14 +14,14 @@ enum class Moves {
     BL;
 
     fun typeOfPlace() = when(this) {
-        LC, MC, RC -> true
+        L, M, R -> true
         TR, MR, BR, TL, ML, BL -> false
     }
 
     fun getColumn() = when(this) {
-        LC -> 0
-        MC -> 1
-        RC -> 2
+        L -> 0
+        M -> 1
+        R -> 2
         else -> throw IllegalStateException("this function is only available for placing moves")
     }
 

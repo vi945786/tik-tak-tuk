@@ -1,10 +1,10 @@
 package tiktaktuk.game
 
-import tiktaktuk.game.Color.Companion.EMPTY
-import tiktaktuk.game.Color.Companion.YELLOW
+import tiktaktuk.game.Color.EMPTY
+import tiktaktuk.game.Color.YELLOW
 import com.google.common.collect.ImmutableList
-import tiktaktuk.game.Color.Companion.BOTH
-import tiktaktuk.game.Color.Companion.RED
+import tiktaktuk.game.Color.BOTH
+import tiktaktuk.game.Color.RED
 
 private fun ImmutableList<Int>.mutable() = this.toTypedArray()
 private fun Array<Int>.immutable() = ImmutableList.copyOf(this)

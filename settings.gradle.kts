@@ -1,3 +1,3 @@
-rootProject.name = "tik-tak-tuk"
+rootProject.name = "tik_tak_tuk"
 include("app")
 

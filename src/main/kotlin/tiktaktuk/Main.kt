@@ -1,32 +1,28 @@
 package tiktaktuk
 
+import tiktaktuk.GameNode.Companion.node
+import tiktaktuk.ai.Ai
+import tiktaktuk.ai.ColoredNode
 import tiktaktuk.game.Board
 import tiktaktuk.game.Color
-import tiktaktuk.game.Color.Companion.BOTH
-import tiktaktuk.game.Color.Companion.EMPTY
-import tiktaktuk.game.Color.Companion.RED
-import tiktaktuk.game.Color.Companion.YELLOW
 import tiktaktuk.game.Moves
-import java.nio.file.Files
-import java.nio.file.Path
-import java.time.Duration
-import java.util.concurrent.TimeUnit
-import kotlin.random.Random
+import java.io.File
+import java.net.URISyntaxException
 import kotlin.system.exitProcess
 
 fun generateGraph() {
     for (i in generateValidBoardIds()) {
         val b = Board.deserialize(i)
-        val bNode = GameNode.of(b)
+        val bNode = b.node()
 
-        if(b.win != EMPTY) {
+        if(b.win != Color.EMPTY) {
             continue
         }
 
         for(move in Moves.entries) {
             val board = b.move(move)
             if(board != null) {
-                bNode.addChild(GameNode.of(board), move)
+                bNode.addChild(board.node(), move)
             }
         }
     }
@@ -57,75 +53,78 @@ fun generateValidBoardIds(): MutableSet<Int> {
     return ids
 }
 
+fun testAi(coloredNode: ColoredNode) {
+    val nodes = mutableListOf(Board.node())
+    val visitedNodes = mutableSetOf<GameNode>()
+
+    var w = 0
+    var l = 0
+    var t = 0
+    while (nodes.isNotEmpty()) {
+        val currentNode = nodes.removeLast()
+
+        if(currentNode.board.win != Color.EMPTY) {
+            when (currentNode.board.win) {
+                coloredNode.winningColor -> w++
+                coloredNode.winningColor.opposite() -> l++
+                Color.BOTH -> t++
+                else -> error { "${currentNode.boardId}: ${currentNode.board.win}" }
+            }
+            continue
+        }
+
+        when (currentNode.board.turn) {
+            coloredNode.winningColor -> Ai.move(currentNode).node.let { visitedNodes.add(it) ; nodes.add(it) }
+            else -> currentNode.children.map { it.node }.filter { it !in visitedNodes }.let { visitedNodes.addAll(it) ; nodes.addAll(it) }
+        }
+    }
+
+    val sb = StringBuilder()
+
+    sb.appendLine(coloredNode.winningColor)
+    sb.appendLine("w: $w")
+    sb.appendLine("l: $l")
+    sb.appendLine("t: $t")
+
+    println(sb.toString())
+}
+
 const val errorRedColor = "\u001b[91m" //for errors
 const val redColor = "\u001b[31m"      //for red player
 const val greenColor = "\u001b[32m"    //for ties
 const val yellowColor = "\u001b[33m"   //for yellow player
 const val blueColor = "\u001b[34m"     //for board
+const val purpleColor = "\u001B[0;35m" // for moves
 const val cyanColor = "\u001b[96m"     //for ai messages
 const val grayColor = "\u001b[90m"     //for board shifts
 const val reset = "\u001b[0m"
 
-fun main() {
-    println(cyanColor + "Preparing AI: this might take a few seconds" + reset)
+fun getCurrentJarLocation(): String? {
+    return try {
+        val jarPath = object {}.javaClass.protectionDomain.codeSource.location.toURI().path
+        File(jarPath).absolutePath
+    } catch (e: URISyntaxException) {
+        e.printStackTrace()
+        null
+    }
+}
+
+fun main(args: Array<String>) {
+
+    UI.before(args)
 
     generateGraph()
+    Ai.train()
 
-    System.console().let { console ->
-        var board = Board()
-        board.print()
+//    listOf(
+//        Thread { testAi(ColoredNode(Color.YELLOW)) },
+//        Thread { testAi(ColoredNode(Color.RED)) }
+//    ).let {
+//        it.forEach { it.start() }
+//        it.forEach { it.join() }
+//    }
 
-        while (board.win == EMPTY) {
-            try {
-                board = board.move(Moves.valueOf(console.readLine().uppercase())) ?: throw IllegalStateException()
-                board = GameNode.of(board).children.maxBy { it.node.redWinOdds }.let { println(cyanColor + "the AI played: " + it.move.name + reset) ; it.node.board }
-
-                board.print()
-            } catch (e: java.lang.IllegalArgumentException) {
-                 println(errorRedColor + "move doesn't exist" + reset)
-            } catch (e: java.lang.NullPointerException) {
-                exitProcess(0)
-            } catch (e: java.lang.IllegalStateException) {
-                println(errorRedColor + "invalid move" + reset)
-                continue
-            } catch (e: java.util.NoSuchElementException) {
-                board.print()
-                break
-            }
-        }
-
-        when(board.win) {
-            YELLOW -> println(yellowColor + "you won" + reset)
-            RED -> println(redColor + "the AI beat you" + reset)
-            BOTH -> println(greenColor + "it's a tie" + reset)
-        }
-    }
+    UI.start()
 }
 
-fun Board.print() {
-    val sb = StringBuilder()
 
-    for (row in 0..<3) {
-        val cells = board[row]
-        for(cell in cells) {
-            sb.append("$blueColor|$reset").append(cell.char())
-        }
-        sb.append("$blueColor|$reset")
-
-        when (shifts[row]) {
-            -1 -> sb.insert(0, "$grayColor|█|█$reset")
-            0 -> sb.insert(0, "$grayColor  |█$reset").append("$grayColor█|$reset")
-            1 -> sb.insert(0, "    ").append("$grayColor█|█|$reset")
-        }
-
-        println(sb.toString())
-        sb.clear()
-    }
-}
-
-fun Color.char() = when(this) {
-    Color.YELLOW -> "${yellowColor}o$reset"
-    Color.RED -> "${redColor}o$reset"
-    Color.EMPTY -> "o"
-    else -> error("invalid color")
-}
