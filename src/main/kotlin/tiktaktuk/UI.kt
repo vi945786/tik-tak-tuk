@@ -14,7 +14,7 @@ object UI {
     }
 
     fun before(args: Array<String>) {
-        if ("new-console" in args || System.console() == null && System.`in` == null) {
+        if ("new-console" in args || "no-console" !in args && System.console() == null) {
 
             val os = System.getProperty("os.name").lowercase()
             val location = getCurrentJarLocation()
