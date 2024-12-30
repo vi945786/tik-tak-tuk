@@ -2,9 +2,12 @@ package tiktaktuk.ai
 
 import tiktaktuk.GameEdge
 import tiktaktuk.GameNode
+import tiktaktuk.GameNode.Companion.nodes
 import tiktaktuk.game.Color
-import tiktaktuk.getTable
-import kotlin.math.E
+import tiktaktuk.game.Color.YELLOW
+import tiktaktuk.generateGraph
+import tiktaktuk.testAi
+import java.util.concurrent.TimeUnit
 import kotlin.math.abs
 
 object Ai {
@@ -28,10 +31,26 @@ object Ai {
         return this
     }
 
+    @JvmStatic
+    fun main(args: Array<String>) {
+        var t0 = System.nanoTime()
+
+        generateGraph()
+        Ai.train()
+        testAi(YELLOW)
+        testAi(Color.RED)
+
+        print("${TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0)} milliseconds")
+    }
+
     fun move(node: GameNode): GameEdge {
+        return move(node, node.board.turn)
+    }
+
+    fun move(node: GameNode, color: Color): GameEdge {
         if (isTraining != Training.After) error { "move is not available before training" }
 
-        return when (node.board.turn) {
+        return when (color) {
             Color.YELLOW -> with(yellow) { node.bestMove() }
             Color.RED -> with(red) { node.bestMove() }
             else -> error {}
@@ -45,8 +64,7 @@ object Ai {
         do {
             currentTotalDifference = 0.0
 
-            for (node in getTable().values) currentTotalDifference += updateNodeOdds(node, coloredNode)
-//            println("${coloredNode.winningColor.name.padEnd(6, ' ')}, ${(++i).toString().padEnd(4, ' ')}: $currentTotalDifference")
+            for (node in nodes.values) currentTotalDifference += updateNodeOdds(node, coloredNode)
 
         } while (currentTotalDifference > coloredNode.THRESHOLD)
     }

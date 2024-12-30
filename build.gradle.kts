@@ -19,6 +19,7 @@ repositories {
 dependencies {
     testImplementation(kotlin("test"))
     implementation("com.google.guava:guava:33.3.1-jre")
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 tasks.withType<Jar> {
@@ -38,4 +39,13 @@ tasks.withType<Jar> {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.register("forceClean") {
+    doLast {
+        Runtime.getRuntime().exec("D:\\Program Files\\LockHunter\\LockHunter.exe -sm -d ${layout.buildDirectory}")
+    }
+}
+kotlin {
+    jvmToolchain(8)
 }

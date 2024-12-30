@@ -1,21 +1,23 @@
 package tiktaktuk
 
 import tiktaktuk.GameNode.Companion.node
+import tiktaktuk.GameNode.Companion.nodes
 import tiktaktuk.ai.Ai
 import tiktaktuk.ai.ColoredNode
 import tiktaktuk.game.Board
 import tiktaktuk.game.Color
+import tiktaktuk.game.Color.*
 import tiktaktuk.game.Moves
-import java.io.File
-import java.net.URISyntaxException
-import kotlin.system.exitProcess
+import tiktaktuk.game.Moves.BL
+import tiktaktuk.game.Moves.ML
+import java.util.*
 
 fun generateGraph() {
     for (i in generateValidBoardIds()) {
         val b = Board.deserialize(i)
         val bNode = b.node()
 
-        if(b.win != Color.EMPTY) {
+        if(b.win != EMPTY) {
             continue
         }
 
@@ -53,40 +55,57 @@ fun generateValidBoardIds(): MutableSet<Int> {
     return ids
 }
 
-fun testAi(coloredNode: ColoredNode) {
-    val nodes = mutableListOf(Board.node())
-    val visitedNodes = mutableSetOf<GameNode>()
+fun isPerfect(color: Color): Map<GameNode, Boolean> {
 
-    var w = 0
-    var l = 0
-    var t = 0
-    while (nodes.isNotEmpty()) {
-        val currentNode = nodes.removeLast()
-
-        if(currentNode.board.win != Color.EMPTY) {
-            when (currentNode.board.win) {
-                coloredNode.winningColor -> w++
-                coloredNode.winningColor.opposite() -> l++
-                Color.BOTH -> t++
-                else -> error { "${currentNode.boardId}: ${currentNode.board.win}" }
-            }
-            continue
-        }
-
-        when (currentNode.board.turn) {
-            coloredNode.winningColor -> Ai.move(currentNode).node.let { visitedNodes.add(it) ; nodes.add(it) }
-            else -> currentNode.children.map { it.node }.filter { it !in visitedNodes }.let { visitedNodes.addAll(it) ; nodes.addAll(it) }
-        }
+    infix fun GameNode.isCycle(child: GameNode): Boolean {
+        return child.children.any { it.node == this }
     }
 
-    val sb = StringBuilder()
+    val isPerfect: MutableMap<GameNode, Boolean> = mutableMapOf()
 
-    sb.appendLine(coloredNode.winningColor)
-    sb.appendLine("w: $w")
-    sb.appendLine("l: $l")
-    sb.appendLine("t: $t")
+    var finished = -1
 
-    println(sb.toString())
+    do {
+        var lastFinished = finished
+        finished = 0
+
+        for(node in nodes.values) {
+            if(isPerfect[node] != null) {
+                finished++
+                continue
+            }
+
+            if(node.board.win != EMPTY) {
+                isPerfect[node] = node.board.win == color
+            } else if(node.board.turn == color) {
+                if(node.children.any { isPerfect[it.node] == true || node isCycle it.node }) {
+                    isPerfect[node] = true
+                } else if(node.children.all { isPerfect[it.node] == false || node isCycle it.node }) {
+                    isPerfect[node] = false
+                }
+            } else {
+                if(node.children.any { isPerfect[it.node] == false || node isCycle it.node }) {
+                    isPerfect[node] = false
+                } else if(node.children.all { isPerfect[it.node] == true || node isCycle it.node }) {
+                    isPerfect[node] = true
+                }
+            }
+        }
+
+        if(finished == lastFinished) {
+            var nullNodes = nodes.values.filter { isPerfect[it] == null }
+
+            for(i in 0 ..< nullNodes.size) {
+                val node = nullNodes[i]
+
+                if(node.children.filter { isPerfect[it.node] == null }.size != 1) continue
+
+                isPerfect[node] = isPerfect[node.children.first { isPerfect[it.node] != null }.node]!!
+            }
+        }
+    } while(finished != nodes.size)
+
+    return isPerfect
 }
 
 const val errorRedColor = "\u001b[91m" //for errors
@@ -94,37 +113,34 @@ const val redColor = "\u001b[31m"      //for red player
 const val greenColor = "\u001b[32m"    //for ties
 const val yellowColor = "\u001b[33m"   //for yellow player
 const val blueColor = "\u001b[34m"     //for board
-const val purpleColor = "\u001B[0;35m" // for moves
+const val purpleColor = "\u001B[0;35m" //for moves
 const val cyanColor = "\u001b[96m"     //for ai messages
 const val grayColor = "\u001b[90m"     //for board shifts
 const val reset = "\u001b[0m"
 
-fun getCurrentJarLocation(): String? {
-    return try {
-        val jarPath = object {}.javaClass.protectionDomain.codeSource.location.toURI().path
-        File(jarPath).absolutePath
-    } catch (e: URISyntaxException) {
-        e.printStackTrace()
-        null
-    }
-}
-
 fun main(args: Array<String>) {
+//    try {
 
-    UI.before(args)
+//        UI.before(args)
 
-    generateGraph()
-    Ai.train()
+        generateGraph()
+//        var isPerfect = isPerfect(RED)
 
-//    listOf(
-//        Thread { testAi(ColoredNode(Color.YELLOW)) },
-//        Thread { testAi(ColoredNode(Color.RED)) }
-//    ).let {
-//        it.forEach { it.start() }
-//        it.forEach { it.join() }
-//    }
 
-    UI.start()
+        Ai.train()
+
+
+////    listOf(
+////        Thread { testAi(ColoredNode(Color.YELLOW)) },
+////        Thread { testAi(ColoredNode(Color.RED)) }
+////    ).let {
+////        it.forEach { it.start() }
+////        it.forEach { it.join() }
+////    }
+
+//        UI.start(true)
+
+//    } catch (_: RuntimeException) { }
 }
 
 

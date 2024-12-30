@@ -5,12 +5,24 @@ import tiktaktuk.ai.Ai
 import tiktaktuk.game.Board
 import tiktaktuk.game.Color
 import tiktaktuk.game.Moves
+import java.io.File
+import java.net.URISyntaxException
 import kotlin.system.exitProcess
 
 object UI {
 
     private val difficulty: Boolean by lazy {
         difficulty()
+    }
+
+    private fun getCurrentJarLocation(): String? {
+        return try {
+            val jarPath = object {}.javaClass.protectionDomain.codeSource.location.toURI().path
+            File(jarPath).absolutePath
+        } catch (e: URISyntaxException) {
+            e.printStackTrace()
+            null
+        }
     }
 
     fun before(args: Array<String>) {
@@ -40,31 +52,32 @@ object UI {
         println(cyanColor + "Preparing AI: this might take a few seconds" + reset)
     }
 
-    fun start() {
+    fun start(debugging: Boolean = false) {
 
         System.console().let {
             try {
-
-                var board = Board()
-                board.print()
-
                 val aiColor = if (difficulty) Color.YELLOW else Color.RED
-                while (board.win == Color.EMPTY) {
-                    board = if (difficulty) aiMove(board) else playerMove(board)
-                    board.print()
-                    if (board.win != Color.EMPTY) break
-                    board = if (!difficulty) aiMove(board) else playerMove(board)
-                    board.print()
-                }
 
-                when (board.win) {
-                    aiColor.opposite() -> println(aiColor.opposite().color() + "you won" + reset)
-                    aiColor -> println(aiColor.color() + "the AI beat you" + reset)
-                    Color.BOTH -> println(greenColor + "it's a tie" + reset)
-                    else -> error {}
-                }
+                while (true) {
 
-                Thread.sleep(2000)
+                    var board = Board()
+                    board.print(debugging)
+
+                    while (board.win == Color.EMPTY) {
+                        board = if (difficulty) aiMove(board) else playerMove(board)
+                        board.print(debugging)
+                        if (board.win != Color.EMPTY) break
+                        board = if (!difficulty) aiMove(board) else playerMove(board)
+                        board.print(debugging)
+                    }
+
+                    when (board.win) {
+                        aiColor.opposite() -> println(aiColor.opposite().color() + "you won" + reset)
+                        aiColor -> println(aiColor.color() + "the AI beat you" + reset)
+                        Color.BOTH -> println(greenColor + "it's a tie" + reset)
+                        else -> error {}
+                    }
+                }
 
             } catch (e: java.lang.NullPointerException) {
                 exitProcess(0)
@@ -107,9 +120,10 @@ object UI {
         return move.node.board
     }
 
-    private fun Board.print() {
+    private fun Board.print(debugging: Boolean) {
         val sb = StringBuilder()
 
+        if(debugging) println(this.serialize())
         println("${purpleColor}┌────── l m r ──────┐${reset}")
         for (row in 0..<3) {
             val cells = board[row]
