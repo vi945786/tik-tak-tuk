@@ -11,6 +11,16 @@ import kotlin.system.exitProcess
 
 object UI {
 
+    private const val ERROR_RED_COLOR = "\u001b[91m" //for errors
+    private const val RED_COLOR = "\u001b[31m"      //for red player
+    private const val GREEN_COLOR = "\u001b[32m"    //for ties
+    private const val YELLOW_COLOR = "\u001b[33m"   //for yellow player
+    private const val BLUE_COLOR = "\u001b[34m"     //for board
+    private const val PURPLE_COLOR = "\u001B[0;35m" //for moves
+    private const val CYAN_COLOR = "\u001b[96m"     //for ai messages
+    private const val GARY_COLOR = "\u001b[90m"     //for board shifts
+    private const val RESET_COLOR = "\u001b[0m"
+
     private val difficulty: Boolean by lazy {
         difficulty()
     }
@@ -45,11 +55,11 @@ object UI {
             exitProcess(-1)
         }
 
-        println("${cyanColor}select AI difficulty: ${purpleColor}hard${reset}${cyanColor} or ${purpleColor}harder${reset}" + reset)
+        println("${CYAN_COLOR}select AI difficulty: ${PURPLE_COLOR}hard${RESET_COLOR}${CYAN_COLOR} or ${PURPLE_COLOR}harder${RESET_COLOR}")
 
         difficulty
 
-        println(cyanColor + "Preparing AI: this might take a few seconds" + reset)
+        println("${CYAN_COLOR}Preparing AI: this might take a few seconds${RESET_COLOR}")
     }
 
     fun start(debugging: Boolean = false) {
@@ -72,14 +82,14 @@ object UI {
                     }
 
                     when (board.win) {
-                        aiColor.opposite() -> println(aiColor.opposite().color() + "you won" + reset)
-                        aiColor -> println(aiColor.color() + "the AI beat you" + reset)
-                        Color.BOTH -> println(greenColor + "it's a tie" + reset)
+                        aiColor.opposite() -> println("${aiColor.opposite().color()}you won${RESET_COLOR}")
+                        aiColor -> println("${aiColor.color()}the AI beat you${RESET_COLOR}")
+                        Color.BOTH -> println("${GREEN_COLOR}it's a tie${RESET_COLOR}")
                         else -> error {}
                     }
                 }
 
-            } catch (e: java.lang.NullPointerException) {
+            } catch (_: java.lang.NullPointerException) {
                 exitProcess(0)
             }
         }
@@ -94,8 +104,8 @@ object UI {
                     "harder" -> true
                     else -> error {}
                 }
-            } catch (e: java.lang.IllegalStateException) {
-                println(errorRedColor + "invalid difficulty" + reset)
+            } catch (_: java.lang.IllegalStateException) {
+                println("${ERROR_RED_COLOR}invalid difficulty${RESET_COLOR}")
             }
         }
     }
@@ -104,19 +114,19 @@ object UI {
         while (true) {
             try {
                 return board.move(Moves.valueOf(readln().uppercase())) ?: throw IllegalStateException()
-            } catch (e: java.lang.IllegalArgumentException) {
-                println(errorRedColor + "move doesn't exist" + reset)
-            } catch (e: java.lang.NullPointerException) {
+            } catch (_: java.lang.IllegalArgumentException) {
+                println("${ERROR_RED_COLOR}move doesn't exist${RESET_COLOR}")
+            } catch (_: java.lang.NullPointerException) {
                 exitProcess(0)
-            } catch (e: java.lang.IllegalStateException) {
-                println(errorRedColor + "invalid move" + reset)
+            } catch (_: java.lang.IllegalStateException) {
+                println("${ERROR_RED_COLOR}invalid move${RESET_COLOR}")
             }
         }
     }
 
     private fun aiMove(board: Board): Board {
         val move = Ai.move(board.node())
-        println(cyanColor + "the AI played: " + purpleColor + move.move.name + reset)
+        println(CYAN_COLOR + "the AI played: ${PURPLE_COLOR}${move.move.name}${RESET_COLOR}")
         return move.node.board
     }
 
@@ -124,33 +134,33 @@ object UI {
         val sb = StringBuilder()
 
         if(debugging) println(this.serialize())
-        println("${purpleColor}┌────── l m r ──────┐${reset}")
+        println("${PURPLE_COLOR}┌────── l m r ──────┐${RESET_COLOR}")
         for (row in 0..<3) {
             val cells = board[row]
             for (cell in cells) {
-                sb.append("$blueColor|$reset").append(cell.color() + "o" + reset)
+                sb.append("$BLUE_COLOR|$RESET_COLOR").append("${cell.color()}o${RESET_COLOR}")
             }
-            sb.append("$blueColor|$reset")
+            sb.append("${BLUE_COLOR}|${RESET_COLOR}")
 
             val rowLetter = if (row == 0) "t" else if (row == 1) "m" else "b"
             when (shifts[row]) {
-                -1 -> sb.insert(0, "$grayColor|█|█$reset").append("     ")
-                0 -> sb.insert(0, "$grayColor  |█$reset").append("$grayColor█|$reset   ")
-                1 -> sb.insert(0, "    ").append("$grayColor█|█|$reset ")
+                -1 -> sb.insert(0, "${GARY_COLOR}|█|█${RESET_COLOR}").append("     ")
+                0 -> sb.insert(0, "$GARY_COLOR  |█$RESET_COLOR").append("${GARY_COLOR}█|${RESET_COLOR}   ")
+                1 -> sb.insert(0, "    ").append("${GARY_COLOR}█|█|${RESET_COLOR} ")
             }
-            sb.insert(0, "$purpleColor${rowLetter}l$reset ")
-            sb.append("$purpleColor${rowLetter}r$reset")
+            sb.insert(0, "${PURPLE_COLOR}${rowLetter}l${RESET_COLOR} ")
+            sb.append("${PURPLE_COLOR}${rowLetter}r${RESET_COLOR}")
 
             println(sb.toString())
             sb.clear()
         }
-        println("${purpleColor}└───────────────────┘${reset}")
+        println("${PURPLE_COLOR}└───────────────────┘${RESET_COLOR}")
     }
 
     private fun Color.color() = when (this) {
-        Color.YELLOW -> yellowColor
-        Color.RED -> redColor
-        Color.EMPTY -> reset
+        Color.YELLOW -> YELLOW_COLOR
+        Color.RED -> RED_COLOR
+        Color.EMPTY -> RESET_COLOR
         else -> error("invalid color")
     }
 }
